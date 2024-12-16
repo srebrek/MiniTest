@@ -35,12 +35,11 @@
     public class DataRowAttribute : Attribute
     {
         public object?[] Data { get; }
-        public string? Description { get; }
+        public string? Description { get; set; }
 
-        public DataRowAttribute(object?[] data, string? description = null)
+        public DataRowAttribute(params object?[] data)
         {
             Data = data;
-            Description = description;
         }
     }
 
