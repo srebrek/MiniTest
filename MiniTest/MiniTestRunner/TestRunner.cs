@@ -28,6 +28,7 @@ namespace MiniTestRunner
 
             foreach (var testClass in TestGetter.GetTestClasses(MainAssembly))
             {
+
                 Tests.Clear();
                 object? testClassInstance = testClass.GetConstructor(Type.EmptyTypes)?.Invoke(null);
                 if (testClassInstance == null)
@@ -75,26 +76,53 @@ namespace MiniTestRunner
 
         public void RunTests(object classInstance)
         {
+            int passed = 0;
+            int failed = 0;
+            int total = 0;
+
+            Console.WriteLine($"Running tests from class {classInstance}...");
             foreach (var testMethod in Tests)
             {
                 if (testMethod.GetCustomAttributes(typeof(DataRowAttribute)).Any() != false)
                 {
+                    Console.WriteLine($"{testMethod.Name}");
                     foreach (DataRowAttribute dataRow in testMethod.GetCustomAttributes(typeof(DataRowAttribute)))
                     {
                         try
                         {
                             BeforeEach?.Invoke();
                             testMethod.Invoke(classInstance, dataRow.Data);
-                            Console.WriteLine($"Runned {testMethod.Name}");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"{dataRow.Description, -60} : PASSED");
+                            Console.ResetColor();
+                            passed++;
+                            total++;
                             AfterEach?.Invoke();
                         }
                         catch (TargetInvocationException ex) when (ex.InnerException is MiniTest.AssertionException assertionEx)
                         {
-                            Console.WriteLine($"Test {testMethod.Name} failed: {assertionEx.Message}");
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"{dataRow.Description, -60} : FAILED");
+                            Console.ResetColor();
+                            failed++;
+                            total++;
+                            Console.WriteLine($"{assertionEx.Message}");
                         }
                         catch (TargetInvocationException ex)
                         {
-                            Console.WriteLine($"Test {testMethod.Name} failed: {ex.InnerException?.Message ?? ex.Message}");
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"{dataRow.Description,-60} : ERROR");
+                            Console.ResetColor();
+                            failed++;
+                            total++;
+                            if (ex.InnerException != null)
+                            {
+                                Console.WriteLine($"{ex.InnerException.Message}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"{ex.Message}");
+                            }
                         }
                     }
                 }
@@ -104,19 +132,49 @@ namespace MiniTestRunner
                     {
                         BeforeEach?.Invoke();
                         testMethod.Invoke(classInstance, null);
-                        Console.WriteLine($"Runned {testMethod.Name}");
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"{testMethod.Name,-60} : PASSED");
+                        Console.ResetColor();
+                        passed++;
+                        total++;
                         AfterEach?.Invoke();
                     }
                     catch (TargetInvocationException ex) when (ex.InnerException is MiniTest.AssertionException assertionEx)
                     {
-                        Console.WriteLine($"Test {testMethod.Name} failed: {assertionEx.Message}");
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{testMethod.Name,-60} : FAILED");
+                        Console.ResetColor();
+                        failed++;
+                        total++;
+                        Console.WriteLine($"{assertionEx.Message}");
                     }
                     catch (TargetInvocationException ex)
                     {
-                        Console.WriteLine($"Test {testMethod.Name} failed: {ex.InnerException?.Message ?? ex.Message}");
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"{testMethod.Name,-60} : ERROR");
+                        Console.ResetColor();
+                        failed++;
+                        total++;
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"{ex.InnerException.Message}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{ex.Message}");
+                        }
                     }
                 }
+                if (testMethod.GetCustomAttribute(typeof(MiniTest.DescriptionAttribute)) is MiniTest.DescriptionAttribute description)
+                {
+                    Console.WriteLine($"{description.Description}");
+                }
             }
+            Console.WriteLine("******************************");
+            Console.WriteLine($"* Test passed:    {passed} / {total}    *");
+            Console.WriteLine($"* Failed:          {failed}         *");
+            Console.WriteLine("******************************");
+            Console.WriteLine("################################################################################");
         }
 
     }
