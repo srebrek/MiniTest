@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthenticationService", "AuthenticationService\AuthenticationService.csproj", "{89956A38-CBD6-4DA4-803A-C565C6EB53BB}"
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35004.147
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthenticationService", "AuthenticationService\AuthenticationService.csproj", "{89956A38-CBD6-4DA4-803A-C565C6EB53BB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthenticationService.Tests", "AuthenticationService.Tests\AuthenticationService.Tests.csproj", "{1E3B0414-F1F8-4A65-BBE4-CF6515D3D2F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthenticationService.Tests", "AuthenticationService.Tests\AuthenticationService.Tests.csproj", "{1E3B0414-F1F8-4A65-BBE4-CF6515D3D2F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniTest", "MiniTest\MiniTest.csproj", "{C66024A3-FE87-4B74-8EF2-786BF0FBB131}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniTestRunner", "MiniTestRunner\MiniTestRunner.csproj", "{13C80002-B792-4725-A85E-1F7CE8C7A5D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,5 +25,19 @@ Global
 		{1E3B0414-F1F8-4A65-BBE4-CF6515D3D2F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E3B0414-F1F8-4A65-BBE4-CF6515D3D2F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E3B0414-F1F8-4A65-BBE4-CF6515D3D2F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C66024A3-FE87-4B74-8EF2-786BF0FBB131}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C66024A3-FE87-4B74-8EF2-786BF0FBB131}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C66024A3-FE87-4B74-8EF2-786BF0FBB131}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C66024A3-FE87-4B74-8EF2-786BF0FBB131}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13C80002-B792-4725-A85E-1F7CE8C7A5D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13C80002-B792-4725-A85E-1F7CE8C7A5D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13C80002-B792-4725-A85E-1F7CE8C7A5D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13C80002-B792-4725-A85E-1F7CE8C7A5D8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3A0A8FB2-A1CF-43A3-9038-544EC879523A}
 	EndGlobalSection
 EndGlobal
