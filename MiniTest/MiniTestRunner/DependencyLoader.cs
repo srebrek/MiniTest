@@ -13,7 +13,28 @@ namespace MiniTestRunner
         public static (Assembly assembly, AssemblyLoadContext ALC) RecursiveLoader(string assemblyPath, AssemblyLoadContext context)
         {
             // var context = new AssemblyLoadContext("TestContext", isCollectible: true);
-            var assembly = context.LoadFromAssemblyPath(assemblyPath);
+            //foreach (var cos in AppDomain.CurrentDomain.GetAssemblies())
+            //{
+            //    Console.WriteLine(cos.Location);
+            //}
+            //Console.WriteLine();
+            //foreach (var cos in context.Assemblies)
+            //{
+            //    Console.WriteLine(cos.FullName);
+            //}
+            //Console.WriteLine("\n");
+
+            Assembly assembly;
+            string assemblyFullName = AssemblyName.GetAssemblyName(assemblyPath).FullName;
+            if (!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName!.Equals(assemblyFullName, StringComparison.OrdinalIgnoreCase)))
+            {
+                assembly = context.LoadFromAssemblyPath(assemblyPath);
+            }
+            else
+            {
+                assembly = AppDomain.CurrentDomain.GetAssemblies().First();
+            }
+
             // assembly.GetReferencedAssemblies();
 
             foreach (var cos in assembly.GetReferencedAssemblies())
@@ -22,9 +43,9 @@ namespace MiniTestRunner
                 var resolver = new AssemblyDependencyResolver(assemblyPath);
                 var path = resolver.ResolveAssemblyToPath(cos);
                 // Console.WriteLine(path);
-                if (path != null && path != @"C:\Users\zlote\Desktop\programowanie_3_laby\P3Z_24Z_Project1\MiniTest\AuthenticationService.Tests\bin\Debug\net8.0\MiniTest.dll")
+                if (path != null)//&& path != @"C:\Users\zlote\Desktop\programowanie_3_laby\P3Z_24Z_Project1\MiniTest\AuthenticationService.Tests\bin\Debug\net8.0\MiniTest.dll")
                 {
-                    context.LoadFromAssemblyPath(path);
+                    // context.LoadFromAssemblyPath(path);
                     RecursiveLoader(path, context);
                 }
             }

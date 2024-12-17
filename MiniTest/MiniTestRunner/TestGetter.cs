@@ -14,10 +14,6 @@ namespace MiniTestRunner
         {
             foreach (var testClass in assembly.GetTypes())
             {
-                //foreach (var attribute in testClass.GetCustomAttributes())
-                //{
-                //    Console.WriteLine(attribute);
-                //}
                 if (testClass.GetCustomAttribute(typeof(TestClassAttribute)) != null)
                 {
                     yield return testClass;

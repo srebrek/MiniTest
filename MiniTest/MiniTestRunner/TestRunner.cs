@@ -1,6 +1,7 @@
 ﻿using MiniTest;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -27,10 +28,11 @@ namespace MiniTestRunner
 
             foreach (var testClass in TestGetter.GetTestClasses(MainAssembly))
             {
+                Tests.Clear();
                 object? testClassInstance = testClass.GetConstructor(Type.EmptyTypes)?.Invoke(null);
                 if (testClassInstance == null)
                 {
-                    Console.WriteLine("No parametless constructor");
+                    Console.WriteLine("No parameterless constructor");
                     continue;
                 }
                 foreach (var beforeEachMethod in TestGetter.GetMethodWithAttribute(testClass, typeof(BeforeEachAttribute)))
@@ -56,13 +58,65 @@ namespace MiniTestRunner
 
                     return string.Compare(a.Name, b.Name, StringComparison.Ordinal);
                 });
+
+                RunTests(testClassInstance);
             }
+            context.Unload();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
         }
 
         public static int GetPriority(MethodInfo method)
         {
             var attribute = method.GetCustomAttributes(typeof(PriorityAttribute)).FirstOrDefault() as PriorityAttribute;
             return attribute?.Priority ?? 0;
+        }
+
+        public void RunTests(object classInstance)
+        {
+            foreach (var testMethod in Tests)
+            {
+                if (testMethod.GetCustomAttributes(typeof(DataRowAttribute)).Any() != false)
+                {
+                    foreach (DataRowAttribute dataRow in testMethod.GetCustomAttributes(typeof(DataRowAttribute)))
+                    {
+                        try
+                        {
+                            BeforeEach?.Invoke();
+                            testMethod.Invoke(classInstance, dataRow.Data);
+                            Console.WriteLine($"Runned {testMethod.Name}");
+                            AfterEach?.Invoke();
+                        }
+                        catch (TargetInvocationException ex) when (ex.InnerException is MiniTest.AssertionException assertionEx)
+                        {
+                            Console.WriteLine($"Test {testMethod.Name} failed: {assertionEx.Message}");
+                        }
+                        catch (TargetInvocationException ex)
+                        {
+                            Console.WriteLine($"Test {testMethod.Name} failed: {ex.InnerException?.Message ?? ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        BeforeEach?.Invoke();
+                        testMethod.Invoke(classInstance, null);
+                        Console.WriteLine($"Runned {testMethod.Name}");
+                        AfterEach?.Invoke();
+                    }
+                    catch (TargetInvocationException ex) when (ex.InnerException is MiniTest.AssertionException assertionEx)
+                    {
+                        Console.WriteLine($"Test {testMethod.Name} failed: {assertionEx.Message}");
+                    }
+                    catch (TargetInvocationException ex)
+                    {
+                        Console.WriteLine($"Test {testMethod.Name} failed: {ex.InnerException?.Message ?? ex.Message}");
+                    }
+                }
+            }
         }
 
     }
