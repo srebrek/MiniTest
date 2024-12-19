@@ -1,6 +1,5 @@
-﻿namespace MiniTest
+﻿namespace MiniTest;
+
+public class AssertionException(string message) : Exception(message)
 {
-    public class AssertionException(string message) : Exception(message)
-    {
-    }
 }
