@@ -21,6 +21,7 @@ public static class CLInputValidator
         }
         if (assemblyPaths.Count == 0)
             Console.WriteLine("No valid assembly paths provided.");
+
         return assemblyPaths;
     }
 }
