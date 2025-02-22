@@ -13,11 +13,10 @@ public class TestRunner
     private readonly List<MethodInfo> Tests = [];
     private object? TestClassInstance = null;
 
+
     public IEnumerable<Type> GetTestClasses()
     {
-        Type? testClassAttributeType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == "MiniTest.TestClassAttribute");
+        Type? testClassAttributeType = GetTypeFromContextAssembly("MiniTest.TestClassAttribute");
 
         foreach (var testClass in MainAssembly.GetTypes())
         {
@@ -25,11 +24,20 @@ public class TestRunner
                 yield return testClass;
         }
     }
+
+    private Type? GetTypeFromContextAssembly(string typeFullName)
+    {
+        return Context.Assemblies
+        .SelectMany(a => a.GetTypes())
+        .FirstOrDefault(t => t.FullName == typeFullName);
+    }
+
     public TestRunner(string assemblyPath)
     {
         Context = new AssemblyLoadContext(Guid.NewGuid().ToString(), isCollectible: true);
         MainAssembly = LoadAssemblyRecursively(assemblyPath);      
     }
+
     private Assembly LoadAssemblyRecursively(string assemblyPath)
     {
         string assemblyFullName = AssemblyName.GetAssemblyName(assemblyPath).FullName;
@@ -50,6 +58,7 @@ public class TestRunner
         }
         return assembly;
     }
+
     public void PrepareTests(Type testClass)
     {
         Tests.Clear();
@@ -82,33 +91,32 @@ public class TestRunner
             return string.Compare(a.Name, b.Name, StringComparison.Ordinal);
         });
     }
+
     public void Clear()
     {
         Context.Unload();
         GC.Collect();
         GC.WaitForPendingFinalizers();
     }
+
     private IEnumerable<MethodInfo> GetMethodWithAttribute(Type testClass, Type attributeType)
     {
-        Type? testClassAttributeType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == attributeType.FullName);
-        foreach (var beforeEachMethod in testClass.GetMethods())
+        Type? testClassAttributeType = GetTypeFromContextAssembly(attributeType.FullName!);
+        foreach (var method in testClass.GetMethods())
         {
-            if (beforeEachMethod.GetCustomAttribute(testClassAttributeType!) != null)
-                yield return beforeEachMethod;
+            if (method.GetCustomAttribute(testClassAttributeType!) != null)
+                yield return method;
         }
     }
+
     private int GetPriority(MethodInfo method)
     {
-        Type? priorityClassAttributeType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == "MiniTest.PriorityAttribute");
-
+        Type? priorityClassAttributeType = GetTypeFromContextAssembly("MiniTest.PriorityAttribute");
         var attribute = method.GetCustomAttributes(priorityClassAttributeType!).FirstOrDefault();
         int? priority = (int?)attribute?.GetType().GetProperty("Priority")?.GetValue(attribute);
         return priority ?? 0;
     }
+
     public void RunTests()
     {
         int passed = 0;
@@ -120,129 +128,117 @@ public class TestRunner
         {
             if (IsDataRow(testMethod))
             {
-                Console.WriteLine($"{testMethod.Name}");
-                foreach (Attribute dataRowAttribute in GetDataRowAttributes(testMethod))
-                {
-                    (object[] Data, string Description) = GetDataRowDataAndDescription(dataRowAttribute);
-                    try
-                    {
-                        BeforeEach?.Invoke();
-                        testMethod.Invoke(TestClassInstance, Data);
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"{Description, -60} : PASSED");
-                        Console.ResetColor();
-                        passed++;
-                        total++;
-                        AfterEach?.Invoke();
-                    }
-                    catch (TargetInvocationException ex) when (ex.InnerException is MiniTest.AssertionException assertionEx)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"{Description, -60} : FAILED");
-                        Console.ResetColor();
-                        failed++;
-                        total++;
-                        Console.WriteLine($"{assertionEx.Message}");
-                    }
-                    catch (TargetInvocationException ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"{Description,-60} : ERROR");
-                        Console.ResetColor();
-                        failed++;
-                        total++;
-                        if (ex.InnerException != null)
-                            Console.WriteLine($"{ex.InnerException.Message}");
-                        else
-                            Console.WriteLine($"{ex.Message}");
-                    }
-                }
+                RunParameterizedTest(testMethod, ref passed, ref failed, ref total);
             }
             else
             {
-                try
-                {
-                    BeforeEach?.Invoke();
-                    testMethod.Invoke(TestClassInstance, null);
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"{testMethod.Name,-60} : PASSED");
-                    Console.ResetColor();
-                    passed++;
-                    total++;
-                    AfterEach?.Invoke();
-                }
-                catch (TargetInvocationException ex)
-                {
-                    Type? assertionExceptionType = GetAssertionExceptionType();
-                    if (ex.InnerException?.GetType() == assertionExceptionType)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"{testMethod.Name,-60} : FAILED");
-                        Console.ResetColor();
-                        failed++;
-                        total++;
-                        if (ex.InnerException != null)
-                            Console.WriteLine($"{ex.InnerException.Message}");
-                        else
-                            Console.WriteLine($"{ex.Message}");
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"{testMethod.Name,-60} : ERROR");
-                        Console.ResetColor();
-                        failed++;
-                        total++;
-                        if (ex.InnerException != null)
-                            Console.WriteLine($"{ex.InnerException.Message}");
-                        else
-                            Console.WriteLine($"{ex.Message}");
-                    }
-                }
+                RunSingleTest(testMethod, ref passed, ref failed, ref total);
             }
-            if (testMethod.GetCustomAttribute(typeof(MiniTest.DescriptionAttribute)) is MiniTest.DescriptionAttribute description)
-                Console.WriteLine($"{description.Description}");
+            string? description = GetDescription(testMethod);
+            if (description != null)
+                Console.WriteLine($"{description}");
         }
-        Console.WriteLine("******************************");
-        Console.WriteLine($"* Test passed:{passed, 6} / {total, -6}{'*'}");
-        Console.WriteLine($"* Failed:{failed, 11}{'*',10}");
-        Console.WriteLine("******************************");
-        Console.WriteLine("################################################################################");
+        PrintSummary(passed, failed, total);
     }
+
     private bool IsDataRow(MethodInfo method)
     {
-        Type? dataRowAttributeType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == "MiniTest.DataRowAttribute");
-
+        Type? dataRowAttributeType = GetTypeFromContextAssembly("MiniTest.DataRowAttribute");
         return method.GetCustomAttributes(dataRowAttributeType!).Any();
     }
+
+    private void RunParameterizedTest(MethodInfo testMethod, ref int passed, ref int failed, ref int total)
+    {
+        Console.WriteLine($"{testMethod.Name}");
+        foreach (Attribute dataRowAttribute in GetDataRowAttributes(testMethod))
+        {
+            (object[] Data, string Description) = GetDataRowDataAndDescription(dataRowAttribute);
+            try
+            {
+                BeforeEach?.Invoke();
+                testMethod.Invoke(TestClassInstance, Data);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($" - {Description,-57} : PASSED");
+                Console.ResetColor();
+                passed++;
+                total++;
+                AfterEach?.Invoke();
+            }
+            catch (TargetInvocationException ex)
+            {
+                HandleTestException(Description, ex, ref failed, ref total);
+            }
+        }
+    }
+
     private IEnumerable<Attribute> GetDataRowAttributes(MethodInfo method)
     {
-        Type? dataRowAttributeType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == "MiniTest.DataRowAttribute");
-
+        Type? dataRowAttributeType = GetTypeFromContextAssembly("MiniTest.DataRowAttribute");
         foreach (var attribute in method.GetCustomAttributes(dataRowAttributeType!))
         {
             yield return attribute;
         }
     }
+
     private (object[] data, string description) GetDataRowDataAndDescription(Attribute dataRowAttribute)
     {
-        Type? dataRowAttributeType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == "MiniTest.DataRowAttribute");
-
+        Type? dataRowAttributeType = GetTypeFromContextAssembly("MiniTest.DataRowAttribute");
         object[] data = (object[])dataRowAttributeType!.GetProperty("Data")!.GetValue(dataRowAttribute)!;
         string description = (string)dataRowAttributeType.GetProperty("Description")!.GetValue(dataRowAttribute)!;
         return (data, description);
     }
+
+    private void RunSingleTest(MethodInfo testMethod, ref int passed, ref int failed, ref int total)
+    {
+        try
+        {
+            BeforeEach?.Invoke();
+            testMethod.Invoke(TestClassInstance, null);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"{testMethod.Name,-60} : PASSED");
+            Console.ResetColor();
+            passed++;
+            total++;
+            AfterEach?.Invoke();
+        }
+        catch (TargetInvocationException ex)
+        {
+            HandleTestException(testMethod.Name, ex, ref failed, ref total);
+        }
+    }
+
+    private void HandleTestException(string testName, TargetInvocationException ex, ref int failed, ref int total)
+    {
+        Type? assertionExceptionType = GetAssertionExceptionType();
+        Console.ForegroundColor = ex.InnerException?.GetType() == assertionExceptionType ? ConsoleColor.Red : ConsoleColor.Yellow;
+        Console.WriteLine($"{testName,-60} : {(ex.InnerException?.GetType() == assertionExceptionType ? "FAILED" : "ERROR")}");
+        Console.ResetColor();
+        failed++;
+        total++;
+        Console.WriteLine($"{ex.InnerException?.Message ?? ex.Message}");
+    }
+
+    private string? GetDescription(MethodInfo method)
+    {
+        Type? descriptionAttributeType = GetTypeFromContextAssembly("MiniTest.DescriptionAttribute");
+        var attribute = method.GetCustomAttribute(descriptionAttributeType!);
+        if (attribute == null)
+            return null;
+        return (string)attribute.GetType().GetProperty("Description")!.GetValue(attribute)!;
+    }
+
+    private void PrintSummary(int passed, int failed, int total)
+    {
+        Console.WriteLine("******************************");
+        Console.WriteLine($"* Test passed:{passed,6} / {total,-6}{'*'}");
+        Console.WriteLine($"* Failed:{failed,11}{'*',10}");
+        Console.WriteLine("******************************");
+        Console.WriteLine("################################################################################");
+    }
+
     private Type? GetAssertionExceptionType()
     {
-        Type? assertionExceptionType = Context.Assemblies
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t => t.FullName == "MiniTest.AssertionException");
+        Type? assertionExceptionType = GetTypeFromContextAssembly("MiniTest.AssertionException");
         return assertionExceptionType;
     }
 }
