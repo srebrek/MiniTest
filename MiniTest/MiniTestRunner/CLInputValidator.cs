@@ -8,7 +8,7 @@ public static class CLInputValidator
 
         if (args.Length == 0)
         {
-            Console.WriteLine("Usage: MiniTestRunner <path1.dll> <path2.dll>");
+            Console.WriteLine("Usage: MiniTestRunner <testPath1.dll> <testPath2.dll>");
             return assemblyPaths;
         }
 

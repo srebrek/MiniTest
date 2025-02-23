@@ -1,9 +1,16 @@
-﻿namespace MiniTestRunner;
+﻿using System.IO;
+
+namespace MiniTestRunner;
 
 public class Program
 {
     public static void Main(string[] args)
     {
+        if (args.Length == 0)
+        {
+            args = [GetDefaultPath()];
+            Console.WriteLine("Default Path has been chosen: " + args[0]);
+        }
         List<string> assemblyPaths = CLInputValidator.Validate(args);
         if (assemblyPaths.Count == 0)
             return;
@@ -18,5 +25,11 @@ public class Program
             }
             testRunner.Clear();
         }
+    }
+
+    public static string GetDefaultPath()
+    {
+        var solutionDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory)!.Parent!.Parent!.Parent!.Parent!.FullName;
+        return Path.Combine(solutionDirectory, "AuthenticationService.Tests/bin/Debug/net8.0/AuthenticationService.Tests.dll");
     }
 }
