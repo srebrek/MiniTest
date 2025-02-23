@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace MiniTestRunner;
+﻿namespace MiniTestRunner;
 
 public class Program
 {
@@ -25,6 +23,8 @@ public class Program
             }
             testRunner.Clear();
         }
+        Console.WriteLine("Testing Finished. Press any key to close.");
+        Console.ReadKey();
     }
 
     public static string GetDefaultPath()
